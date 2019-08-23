@@ -1,0 +1,54 @@
+version: '2.1'
+services:
+  node1:
+    image: deepfabric/converthouse
+    ports:
+      - "8081:8080"
+    command:
+      - --name=node1
+      - --addr=node1:8080
+      - --log-level=info
+      - --prophet-addr=node1:9529
+      - --prophet-urls-client=http://0.0.0.0:2371
+      - --prophet-urls-advertise-client=http://node1:2371
+      - --prophet-urls-peer=http://0.0.0.0:2381
+      - --prophet-urls-advertise-peer=http://node1:2381
+      - --prophet-storage=true
+
+  node2:
+    image: deepfabric/converthouse
+    depends_on: 
+      - node1
+    ports:
+      - "8082:8080"
+    command:
+      - --wait=5
+      - --name=node2
+      - --addr=node2:8080
+      - --log-level=info
+      - --prophet-addr=node2:9529
+      - --prophet-urls-client=http://0.0.0.0:2371
+      - --prophet-urls-advertise-client=http://node2:2371
+      - --prophet-urls-peer=http://0.0.0.0:2381
+      - --prophet-urls-advertise-peer=http://node2:2381
+      - --prophet-addr-join=http://node1:2371
+      - --prophet-storage=true
+
+  node3:
+    image: deepfabric/converthouse
+    depends_on: 
+      - node2
+    ports:
+      - "8083:8080"
+    command:
+      - --wait=15
+      - --name=node3
+      - --addr=node3:8080
+      - --log-level=info
+      - --prophet-addr=node3:9529
+      - --prophet-urls-client=http://0.0.0.0:2371
+      - --prophet-urls-advertise-client=http://node3:2371
+      - --prophet-urls-peer=http://0.0.0.0:2381
+      - --prophet-urls-advertise-peer=http://node3:2381
+      - --prophet-addr-join=http://node1:2371
+      - --prophet-storage=true
