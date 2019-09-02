@@ -98,5 +98,11 @@ func (s *store) startShards() {
 }
 
 func (s *store) mustSaveRemovedPartitions(table string, parititions ...uint64) {
-	// TODO: impl
+	err := s.api.Remove(table, parititions...)
+	if err != nil {
+		log.Fatalf("remove local partition %s(%+v) failed with %+v",
+			table,
+			parititions,
+			err)
+	}
 }

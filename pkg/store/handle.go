@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fagongzi/goetty"
-
 	"github.com/deepfabric/converthouse/pkg/meta"
+	"github.com/fagongzi/goetty"
 	"github.com/fagongzi/log"
 	"github.com/infinivision/prophet"
 )

@@ -12,7 +12,7 @@ Converthouse是一个使用Go语言开发的独立进程，来帮助Clickhouse�
 4. 尽可能的减少对Clickhouse插入和查询性能的影响。
 
 ### Architecture
-整体架构图
+![](./imgs/arch.png)
 
 ### 概念
 #### Shard
@@ -33,11 +33,16 @@ Converthouse是一个使用Go语言开发的独立进程，来帮助Clickhouse�
 每个Shard都会有多个Replication。每个Replication通过消费MQ的Topic中的数据来插入新的数据。在MQ中的Topic的规则是：TableName+Partition。所以一个Replication会消费它管理的多个Partition的Topic。可见Replication之间的数据是最终一致的。
 
 #### Insert
-1. 客户端插入一批数据到Clickhouse
-2. Clickhouse根据Table规则，插入到MQ对应的Topic中
-3. Converthouse的Shard消费对应的MQ的Topic得到数据，调用Clickhouse的插入数据接口完成数据的插入
+![](./imgs/insert_flow.png)
+
+1. 客户端执行一条修改数据的DML语句到集群中任意一个Clickhouse实例
+2. Clickhouse根据Table规则，计算这批修改的数据关联的Partition是哪些，然后把数据插入到对应的MQ的Topic中
+3. 返回客户端执行成功
+3. Converthouse的Shard消费对应的MQ的Topic得到数据，调用本地Clickhouse的修改数据接口完成数据的修改
 
 #### Query
+![](./imgs/query_flow.png)
+
 1. Clickhouse收到查询语句，通过Converthouse提供的查询Table Shard的接口得到需要查询的Clickhouse实例
 2. 并发查询所有的Shard的Clickhouse，得到查询结果，聚合处理，返回客户端
 
@@ -47,9 +52,11 @@ Converthouse是一个使用Go语言开发的独立进程，来帮助Clickhouse�
 3. Leader用来处理Replication的add, remove以及Scale操作
 
 #### Scale-out
+![](./imgs/scale.png)
+
 1. Converthouse发现集群中新增了一个节点
 2. Converthouse调度整个集群中的所有Table的所有Shard，进行分裂处理
-3. 每个Shard从它管理的Partition集合的中间分裂为2个Shard，例如从s1[p1, p10] -> s1[p1,p5], s2[p6~p10]
+3. 每个Shard从它管理的Partition集合的中间分裂为2个Shard，例如从s1[p1, p4] -> s1[p1,p2], s2[p3~p4]
 4. 通过后续的Rebalance流程把一些Shard搬迁到新的节点上，达到平衡
 
 #### Rebalance
