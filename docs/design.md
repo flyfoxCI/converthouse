@@ -1,14 +1,14 @@
-## Converthouse design
-This article describes the original design of the Converthouse, the design, and the issues that need to be addressed.
+## The Design of Converthouse
+This article describes the original design of Converthouse, and issues that need to be addressed.
 
-### Why?
-At present, Clickhouse manages distributed tables. In Scale-out, Rebalance does not meet our needs, and Zookeeper is too involved in the replication management mechanism, which causes the insertion performance to be affected. Therefore, we propose to implement Converthouse. Help Clickhouse to better implement distributed tables.
+### Motivation
+At present, the distributed tables of Clickhouse could not saitisfy our requirements in terms of scalability, auto-rebalance, and performance. Therefore, we propose to implement Converthouse, to help Clickhouse manage distributed tables better, such that Clickhouse could be more cloud-native friendly.
 
 ### What is Converthouse?
-Converthouse is a stand-alone process developed using the Go language to help Clickhouse better manage distributed tables and implement more distributed Table features. Our design goals are as follows:
-1. On each node where the Clickhouse runs the instance, a Converthouse instance is run.
-2. Converthouse is responsible for the high availability of the copy of Clickhouse's distributed table, Scale-out, Rebalance.
-3. Converthouse and Clickhouse previously interacted with each other through RPC to provide the necessary interfaces to each other (see the subsequent process for details).
+Converthouse is a stand-alone process developed using the Go language to help Clickhouse better manage distributed tables. The initial design is as follows:
+1. On each node where Clickhouse runs, a Converthouse instance is also running.
+2. Converthouse is responsible for the high availability of the replication set of Clickhouse's distributed tables, scale-out, auto-rebalance.
+3. Converthouse and Clickhouse interacted with each other through RPC to provide the necessary interfaces to each other (see the subsequent process for details).
 4. Minimize the impact on Clickhouse insertion and query performance.
 
 ### Architecture
@@ -16,7 +16,7 @@ Converthouse is a stand-alone process developed using the Go language to help Cl
 
 ### Concept
 #### Shard
-A Table is divided into multiple Shards, and each Shard manages a part of the Partition. Note that the set of Partitions managed by this shard will change during the running of the system. A Table corresponds to multiple shards. So Table:Shard = 1:N, Shard:Partition=1:N.
+A Table is divided into multiple Shards, and each Shard manages a part of the Partition. Note that the set of Partitions managed by this shard will change during the running of the system, therefore Partition forms the fundamental building block of auto-rebalance. A Table corresponds to multiple shards. So Table:Shard = 1:N, Shard:Partition=1:N. 
 
 #### Replication
 Each shard will have multiple copies on different machines. The data corresponding to the shard on each machine is called a Replication of this shard.
@@ -44,12 +44,12 @@ Each shard will have multiple Replications. Each Replication inserts new data by
 ![](./imgs/query_flow.png)
 
 1. Clickhouse receives the query statement and obtains the Clickhouse instance that needs to be queried through the interface of the Table Shard provided by Converthouse.
-2. Concurrently query all the Shard's Clickhouse, get the query results, aggregate the processing, and return to the client.
+2. A query will be sent to all Shards of Clickhouse to get the results and return to the client.
 
 #### Replication Leader Election 
 1. Converthouse embeds Etcd to provide distributed lock and leader elections
 2. A leader will be selected between multiple replications for each shard.
-3. Leader's add, remove, and scale operations for handling Replication
+3. Leader's add, remove, and scale operations for handling Replication.
 
 #### Scale-out
 ![](./imgs/scale.png)
@@ -61,13 +61,13 @@ Each shard will have multiple Replications. Each Replication inserts new data by
 
 #### Rebalance
 1. Converthouse will select a leader from the entire cluster to use as a scheduler.
-2. Leader's Converthouse instance has a global metadata view
-3. Each Shard's Leader acquires scheduling operations through heartbeat and Leaderhouse's Leader communication.
-4. Finally reach the number of shards of all nodes, the number of leaders, the balance of the stored data
+2. Leader's Converthouse instance has a global metadata view.
+3. Each Shard's leader acquires scheduling operations through heartbeat and communications with the leader of Converthouse.
+4. The rebalance is eventually reached in terms of the number of shards, the number of leaders, the amount of stored data across all nodes.
 
 ### Questions
-1. Whether Shard and Partition can be 1:1, then the complexity will be much lower in Scale-out.
+1. Whether Shard and Partition can be 1:1, then the complexity will be much lower during scaling out.
 
 ### Need help
-1. The current development of Converthouse is almost over. I hope the community can be maintained together.
-2. I hope someone in the community can modify the Clickhouse together.
+1. Currently the development of Converthouse is almost finished. I hope the community could help to maintaine together.
+2. Hope someone in the community can join to adjust Clickhouse together, to help the cloud native Clickhouse be ready as soon as possible.
